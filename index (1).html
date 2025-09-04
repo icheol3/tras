@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyHub - Q&A 및 학습 플래너</title>
+    <style>
+        /* 임시 기본 스타일 */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .nav { background: white; padding: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        .nav h1 { color: #333; }
+        .btn { background: #3b82f6; color: white; padding: 0.5rem 1rem; border: none; border-radius: 0.25rem; cursor: pointer; }
+        .card { background: white; padding: 1.5rem; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1rem; }
+        .hidden { display: none !important; }
+        .active { display: block; }
+        .page { display: none; }
+        .page.active { display: block; }
+    </style>
+    <!-- TailwindCSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+    <!-- 상단 네비게이션 바 -->
+    <nav class="bg-white dark:bg-gray-800 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <!-- 로고 -->
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-graduation-cap text-2xl text-blue-600"></i>
+                    <span class="text-xl font-bold text-gray-800 dark:text-white">StudyHub</span>
+                </div>
+
+                <!-- 메인 메뉴 -->
+                <div class="hidden md:flex space-x-8">
+                    <button class="nav-btn active" data-page="dashboard">
+                        <i class="fas fa-home"></i> 대시보드
+                    </button>
+                    <button class="nav-btn" data-page="qna">
+                        <i class="fas fa-question-circle"></i> Q&A
+                    </button>
+                    <button class="nav-btn" data-page="planner">
+                        <i class="fas fa-calendar-check"></i> 플래너
+                    </button>
+                    <button class="nav-btn" data-page="statistics">
+                        <i class="fas fa-chart-bar"></i> 통계
+                    </button>
+                    <button class="nav-btn" data-page="community">
+                        <i class="fas fa-users"></i> 커뮤니티
+                    </button>
+                    <button class="nav-btn" data-page="profile">
+                        <i class="fas fa-user"></i> 프로필
+                    </button>
+                </div>
+
+                <!-- 사용자 정보 및 테마 토글 -->
+                <div class="flex items-center space-x-4">
+                    <!-- 알림 아이콘 -->
+                    <div class="relative">
+                        <button id="notificationBtn" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                            <i class="fas fa-bell text-gray-600 dark:text-gray-300"></i>
+                            <span id="notificationCount" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1 hidden">0</span>
+                        </button>
+                    </div>
+
+                    <!-- 테마 토글 -->
+                    <button id="themeToggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                        <i class="fas fa-moon dark:hidden text-gray-600"></i>
+                        <i class="fas fa-sun hidden dark:block text-yellow-400"></i>
+                    </button>
+
+                    <!-- 사용자 메뉴 -->
+                    <div class="relative">
+                        <button id="userMenuBtn" class="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+                            <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                                <span class="text-white text-sm font-bold" id="userInitial">U</span>
+                            </div>
+                            <span class="hidden md:block text-gray-700 dark:text-gray-300" id="userName">사용자</span>
+                        </button>
+                        <!-- 사용자 드롭다운 메뉴 -->
+                        <div id="userDropdown" class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg hidden z-50">
+                            <div class="py-2">
+                                <button class="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <i class="fas fa-cog mr-2"></i> 설정
+                                </button>
+                                <button id="logoutBtn" class="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <i class="fas fa-sign-out-alt mr-2"></i> 로그아웃
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 모바일 메뉴 버튼 -->
+                    <button id="mobileMenuBtn" class="md:hidden p-2">
+                        <i class="fas fa-bars text-gray-600 dark:text-gray-300"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 모바일 메뉴 -->
+        <div id="mobileMenu" class="md:hidden bg-white dark:bg-gray-800 border-t hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1">
+                <button class="mobile-nav-btn active" data-page="dashboard">
+                    <i class="fas fa-home"></i> 대시보드
+                </button>
+                <button class="mobile-nav-btn" data-page="qna">
+                    <i class="fas fa-question-circle"></i> Q&A
+                </button>
+                <button class="mobile-nav-btn" data-page="planner">
+                    <i class="fas fa-calendar-check"></i> 플래너
+                </button>
+                <button class="mobile-nav-btn" data-page="statistics">
+                    <i class="fas fa-chart-bar"></i> 통계
+                </button>
+                <button class="mobile-nav-btn" data-page="community">
+                    <i class="fas fa-users"></i> 커뮤니티
+                </button>
+                <button class="mobile-nav-btn" data-page="profile">
+                    <i class="fas fa-user"></i> 프로필
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 메인 컨텐츠 영역 -->
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        <!-- 대시보드 페이지 -->
+        <div id="dashboard-page" class="page active">
+            <div class="mb-6">
+                <h1 class="text-3xl font-bold text-gray-800 dark:text-white mb-2">대시보드</h1>
+                <p class="text-gray-600 dark:text-gray-400">오늘의 학습 현황을 한눈에 확인하세요</p>
+            </div>
+
+            <!-- 요약 카드들 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-clock text-blue-600"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">오늘 공부 시간</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-white" id="todayStudyTime">0시간</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-check-circle text-green-600"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">완료된 할일</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-white" id="completedTasks">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-question text-yellow-600"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">내 질문</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-white" id="myQuestions">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-bed text-purple-600"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">수면 시간</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-white" id="sleepTime">8시간</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 최근 활동 -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">최근 Q&A</h2>
+                    <div id="recentQnA" class="space-y-3">
+                        <div class="text-gray-500 dark:text-gray-400 text-center py-8">
+                            질문을 작성해보세요!
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">오늘의 할일</h2>
+                    <div id="todayTasks" class="space-y-3">
+                        <div class="text-gray-500 dark:text-gray-400 text-center py-8">
+                            할일을 추가해보세요!
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Q&A 페이지 -->
+        <div id="qna-page" class="page hidden">
+            <div class="mb-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-800 dark:text-white mb-2">Q&A</h1>
+                        <p class="text-gray-600 dark:text-gray-400">질문하고 답변을 받아보세요</p>
+                    </div>
+                    <button id="askQuestionBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                        <i class="fas fa-plus mr-2"></i> 질문하기
+                    </button>
+                </div>
+            </div>
+
+            <!-- 검색 바 -->
+            <div class="mb-6">
+                <div class="relative">
+                    <input type="text" id="qnaSearchInput" placeholder="질문이나 답변을 검색해보세요..." 
+                           class="w-full px-4 py-2 pl-10 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center">
+                        <i class="fas fa-search text-gray-400"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Q&A 목록 -->
+            <div id="qnaList" class="space-y-4">
+                <div class="text-gray-500 dark:text-gray-400 text-center py-8">
+                    아직 질문이 없습니다. 첫 번째 질문을 작성해보세요!
+                </div>
+            </div>
+        </div>
+
+        <!-- 플래너 페이지 -->
+        <div id="planner-page" class="page hidden">
+            <div class="mb-6">
+                <h1 class="text-3xl font-bold text-gray-800 dark:text-white mb-2">학습 플래너</h1>
+                <p class="text-gray-600 dark:text-gray-400">할일과 학습 시간을 관리하세요</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- 할일 목록 -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold text-gray-800 dark:text-white">할일 목록</h2>
+                        <button id="addTaskBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">
+                            <i class="fas fa-plus mr-1"></i> 추가
+                        </button>
+                    </div>
+                    <div id="taskList" class="space-y-2">
+                        <!-- 할일 항목들이 여기에 추가됩니다 -->
+                    </div>
+                </div>
+
+                <!-- 학습 시간 기록 -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">학습 시간 기록</h2>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">과목</label>
+                        <select id="subjectSelect" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md">
+                            <option value="수학">수학</option>
+                            <option value="영어">영어</option>
+                            <option value="과학">과학</option>
+                            <option value="사회">사회</option>
+                            <option value="기타">기타</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">학습 시간 (분)</label>
+                        <input type="number" id="studyTimeInput" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md" placeholder="60" min="1">
+                    </div>
+
+                    <button id="recordStudyBtn" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-md">
+                        <i class="fas fa-plus mr-2"></i> 기록하기
+                    </button>
+
+                    <div class="mt-6">
+                        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">오늘의 학습 기록</h3>
+                        <div id="todayStudyRecords" class="space-y-2">
+                            <!-- 학습 기록들이 여기에 추가됩니다 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 통계 페이지 -->
+        <div id="statistics-page" class="page hidden">
+            <div class="mb-6">
+                <h1 class="text-3xl font-bold text-gray-800 dark:text-white mb-2">학습 통계</h1>
+                <p class="text-gray-600 dark:text-gray-400">학습 패턴과 성과를 분석해보세요</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- 주간 학습 시간 차트 -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">주간 학습 시간</h2>
+                    <canvas id="weeklyStudyChart" width="400" height="300"></canvas>
+                </div>
+
+                <!-- 과목별 학습 시간 차트 -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">과목별 학습 시간</h2>
+                    <canvas id="subjectChart" width="400" height="300"></canvas>
+                </div>
+
+                <!-- 수면 패턴 차트 -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">수면 패턴</h2>
+                    <canvas id="sleepChart" width="400" height="300"></canvas>
+                </div>
+
+                <!-- 습관 체크 통계 -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">습관 달성률</h2>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700 dark:text-gray-300">일찍 일어나기</span>
+                            <div class="flex items-center">
+                                <div class="w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                    <div class="bg-green-600 h-2 rounded-full" style="width: 75%"></div>
+                                </div>
+                                <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">75%</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700 dark:text-gray-300">꾸준한 공부</span>
+                            <div class="flex items-center">
+                                <div class="w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                    <div class="bg-blue-600 h-2 rounded-full" style="width: 85%"></div>
+                                </div>
+                                <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">85%</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700 dark:text-gray-300">운동하기</span>
+                            <div class="flex items-center">
+                                <div class="w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                    <div class="bg-yellow-600 h-2 rounded-full" style="width: 60%"></div>
+                                </div>
+                                <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">60%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 커뮤니티 페이지 -->
+        <div id="community-page" class="page hidden">
+            <div class="mb-6">
+                <h1 class="text-3xl font-bold text-gray-800 dark:text-white mb-2">커뮤니티</h1>
+                <p class="text-gray-600 dark:text-gray-400">다른 사용자들과 학습 경험을 공유하세요</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 공유 게시물 -->
+                <div class="lg:col-span-2">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800 dark:text-white">학습 성과 공유</h2>
+                            <button id="sharePostBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">
+                                <i class="fas fa-plus mr-1"></i> 공유하기
+                            </button>
+                        </div>
+                        <div id="communityPosts" class="space-y-4">
+                            <!-- 커뮤니티 게시물들이 여기에 추가됩니다 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 사이드바 -->
+                <div class="space-y-6">
+                    <!-- 인기 테마 -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">인기 테마</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-700 dark:text-gray-300">다크 블루</span>
+                                <span class="text-sm text-gray-500">15명</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-700 dark:text-gray-300">포레스트 그린</span>
+                                <span class="text-sm text-gray-500">12명</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-700 dark:text-gray-300">미니멀 화이트</span>
+                                <span class="text-sm text-gray-500">8명</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 활성 사용자 -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">활성 사용자</h3>
+                        <div class="space-y-3">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                                    <span class="text-white text-sm font-bold">김</span>
+                                </div>
+                                <div class="ml-3">
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">김학생</p>
+                                    <p class="text-xs text-gray-500">5시간 공부</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                                    <span class="text-white text-sm font-bold">이</span>
+                                </div>
+                                <div class="ml-3">
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">이공부</p>
+                                    <p class="text-xs text-gray-500">4시간 공부</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 프로필 페이지 -->
+        <div id="profile-page" class="page hidden">
+            <div class="mb-6">
+                <h1 class="text-3xl font-bold text-gray-800 dark:text-white mb-2">내 프로필</h1>
+                <p class="text-gray-600 dark:text-gray-400">개인 정보와 학습 설정을 관리하세요</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 프로필 정보 -->
+                <div class="lg:col-span-2">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">개인 정보</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">이름</label>
+                                <input type="text" id="profileName" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md" value="사용자">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">이메일</label>
+                                <input type="email" id="profileEmail" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md" value="user@example.com">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">목표 공부 시간 (시간/일)</label>
+                                <input type="number" id="dailyGoal" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md" value="4" min="1" max="24">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">목표 수면 시간</label>
+                                <input type="number" id="sleepGoal" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md" value="8" min="1" max="12">
+                            </div>
+                        </div>
+                        <button id="saveProfileBtn" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">
+                            저장하기
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 테마 설정 -->
+                <div class="space-y-6">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">테마 설정</h3>
+                        <div class="space-y-3">
+                            <button class="theme-option w-full p-3 rounded-lg border-2 border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-left">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-medium">기본 테마</span>
+                                    <i class="fas fa-check text-blue-600"></i>
+                                </div>
+                            </button>
+                            <button class="theme-option w-full p-3 rounded-lg border-2 border-gray-300 dark:border-gray-600 hover:border-green-500 text-left">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-medium">포레스트 그린</span>
+                                </div>
+                            </button>
+                            <button class="theme-option w-full p-3 rounded-lg border-2 border-gray-300 dark:border-gray-600 hover:border-purple-500 text-left">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-medium">퍼플 모드</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 알림 설정 -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">알림 설정</h3>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700 dark:text-gray-300">질문 답변 알림</span>
+                                <input type="checkbox" class="toggle-checkbox" checked>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700 dark:text-gray-300">목표 달성 알림</span>
+                                <input type="checkbox" class="toggle-checkbox" checked>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700 dark:text-gray-300">휴식 시간 알림</span>
+                                <input type="checkbox" class="toggle-checkbox">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 모달들 -->
+    <!-- 질문하기 모달 -->
+    <div id="questionModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl">
+                <div class="flex justify-between items-center p-6 border-b dark:border-gray-700">
+                    <h2 class="text-xl font-semibold text-gray-800 dark:text-white">새 질문 작성</h2>
+                    <button id="closeQuestionModal" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-6">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">제목</label>
+                        <input type="text" id="questionTitle" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md" placeholder="질문 제목을 입력하세요">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">내용</label>
+                        <textarea id="questionContent" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md h-32" placeholder="질문 내용을 자세히 작성해주세요"></textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">이미지 첨부</label>
+                        <input type="file" id="questionImage" accept="image/*" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md">
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button id="cancelQuestion" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">
+                            취소
+                        </button>
+                        <button id="submitQuestion" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md">
+                            질문 등록
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 로그인 모달 -->
+    <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-50 z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+                <div class="p-6">
+                    <div class="text-center mb-6">
+                        <i class="fas fa-graduation-cap text-4xl text-blue-600 mb-2"></i>
+                        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">StudyHub 로그인</h2>
+                        <p class="text-gray-600 dark:text-gray-400">학습 여정을 시작하세요</p>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">이름</label>
+                            <input type="text" id="loginName" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md" placeholder="이름을 입력하세요">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">이메일</label>
+                            <input type="email" id="loginEmail" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md" placeholder="이메일을 입력하세요">
+                        </div>
+                        <button id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md font-medium">
+                            시작하기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript 파일 로드 -->
+    <script src="script.js"></script>
+</body>
+</html>
